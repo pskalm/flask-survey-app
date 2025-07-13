@@ -7,7 +7,7 @@ import os
 import csv
 from flask import Response as FlaskResponse
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="code/templates")
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///responses.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
