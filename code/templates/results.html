@@ -2,128 +2,127 @@
 {% block content %}
 <div class="container py-5">
 
-<div class="d-flex justify-content-end gap-2 mb-4">
+  <!-- Upload & Download CSV -->
+  <div class="d-flex justify-content-end gap-2 mb-4">
     <a href="/upload" class="btn btn-success">📤 Upload CSV</a>
     <a href="/download" class="btn btn-success">📥 Download CSV</a>
-</div>
+  </div>
 
-
-
-<h2 class="mt-5">☁️ Word Cloud from Likes & Suggestions</h2>
-<div class="wordcloud-wrapper">
+  <!-- Word Cloud -->
+  <h2 class="mt-5">☁️ Word Cloud from Likes & Suggestions</h2>
+  <div class="wordcloud-wrapper">
     <div class="wordcloud-box shadow rounded p-2">
-        <img src="{{ url_for('static', filename='wordcloud.png') }}" alt="WordCloud" class="img-fluid">
+      <img src="{{ url_for('static', filename='wordcloud.png') }}" alt="WordCloud" class="img-fluid">
     </div>
-</div>
+  </div>
 
-<style>
+  <!-- Word Cloud Style -->
+  <style>
     .wordcloud-wrapper {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 10px;
     }
 
     .wordcloud-box {
-        background-color: #f9f9f9;
-        border: 1px solid #ddd;
-        max-width: 500px;
-        width: 100%;
-        padding: 10px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      max-width: 500px;
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     .wordcloud-box img {
-        width: 100%;
-        height: auto;
-        object-fit: contain;
-        display: block;
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+      display: block;
     }
-</style>
+  </style>
 
+  <!-- Bar Chart (Department Ratings) -->
+  <h2 class="mt-5">📊 Department Ratings</h2>
+  <div class="text-center">
+    <canvas id="barChart" class="mx-auto custom-bar-chart"></canvas>
+  </div>
+  <style>
+    .custom-bar-chart {
+      width: 50% !important;
+      height: 300px !important;
+    }
+  </style>
 
-    <h2 class="mt-5">📊 Department Ratings</h2>
-    <div class="text-center">
-        <canvas id="barChart" class="mx-auto custom-bar-chart"></canvas>
-    </div>
+  <!-- Pie Chart (Gender) -->
+  <h2 class="mt-5">👥 Gender Distribution</h2>
+  <div class="d-flex justify-content-center">
+    <canvas id="genderChart" class="small-pie-chart"></canvas>
+  </div>
+  <style>
+    .small-pie-chart {
+      width: 300px !important;
+      height: 300px !important;
+    }
+  </style>
 
-    <style>
-        .custom-bar-chart {
-            width: 50% !important;
-            height: 300px !important; /* or adjust to 500px, 600px, etc. */
-        }
-    </style>
+  <!-- Line Chart (Individual Ratings) -->
+  <h2 class="mt-5">🧍 Individual Ratings</h2>
+  <div class="text-center">
+    <canvas id="lineChart" class="mx-auto custom-line-chart"></canvas>
+  </div>
+  <style>
+    .custom-line-chart {
+      width: 50% !important;
+      height: 300px !important;
+    }
+  </style>
 
+  <!-- Summary Stats -->
+  <p class="mt-4"><strong>Total Responses:</strong> {{ total_responses }}</p>
+  <p><strong>Average Age:</strong> {{ average_age }}</p>
+  <p><strong>Unique Names:</strong> {{ unique_names | length }}</p>
 
-
-    <h2 class="mt-5">👥 Gender Distribution</h2>
-    <div class="d-flex justify-content-center">
-        <canvas id="genderChart" class="small-pie-chart"></canvas>
-    </div>
-
-    <style>
-        .small-pie-chart {
-            width: 300px !important;
-            height: 300px !important;
-        }
-    </style>
-
-    <h2 class="mt-5">🧍 Individual Ratings</h2>
-    <div class="text-center">
-        <canvas id="lineChart" class="mx-auto custom-line-chart"></canvas>
-    </div>
-
-    <style>
-        .custom-line-chart {
-            width: 50% !important;
-            height: 300px !important; /* or adjust to 500px, 600px, etc. */
-         }
-        </style>
-
-
-    <p class="mt-4"><strong>Total Responses:</strong> {{ total_responses }}</p>
-    <p><strong>Average Age:</strong> {{ average_age }}</p>
-    <p><strong>Unique Names:</strong> {{ unique_names | length }}</p>
-
-    <h4 class="mt-5">📝 Response Table</h4>
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead class="table-dark">
-                <tr>
-                    <th>Name</th><th>Email</th><th>Age</th><th>Gender</th><th>Department</th>
-                    <th>Rating</th><th>Likes</th><th>Suggestions</th><th>Recommend</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for r in responses %}
-                <tr>
-                    <td>{{ r.name }}</td>
-                    <td>{{ r.email }}</td>
-                    <td>{{ r.age }}</td>
-                    <td>{{ r.gender }}</td>
-                    <td>{{ r.dept }}</td>
-                    <td>{{ r.rating }}</td>
-                    <td>{{ r.likes }}</td>
-                    <td>{{ r.suggestions }}</td>
-                    <td>{{ r.recommend }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+  <!-- Response Table -->
+  <h4 class="mt-5">📝 Response Table</h4>
+  <div class="table-responsive">
+    <table class="table table-striped">
+      <thead class="table-dark">
+        <tr>
+          <th>Name</th><th>Email</th><th>Age</th><th>Gender</th><th>Department</th>
+          <th>Rating</th><th>Likes</th><th>Suggestions</th><th>Recommend</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in responses %}
+        <tr>
+          <td>{{ r.name }}</td>
+          <td>{{ r.email }}</td>
+          <td>{{ r.age }}</td>
+          <td>{{ r.gender }}</td>
+          <td>{{ r.dept }}</td>
+          <td>{{ r.rating }}</td>
+          <td>{{ r.likes }}</td>
+          <td>{{ r.suggestions }}</td>
+          <td>{{ r.recommend }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  // Injected from Flask (make sure 'chart_data' is passed from Flask backend)
   const chartData = {
-    dept_labels: {{ chart_data.dept_labels | tojson | safe }},
-    dept_ratings: {{ chart_data.dept_ratings | tojson | safe }},
-    gender_labels: {{ chart_data.gender_labels | tojson | safe }},
-    gender_counts: {{ chart_data.gender_counts | tojson | safe }},
-    line_labels: {{ chart_data.line_labels | tojson | safe }},
-    line_ratings: {{ chart_data.line_ratings | tojson | safe }}
+    dept_labels: {{ chart_data.dept_labels | tojson }},
+    dept_ratings: {{ chart_data.dept_ratings | tojson }},
+    gender_labels: {{ chart_data.gender_labels | tojson }},
+    gender_counts: {{ chart_data.gender_counts | tojson }},
+    line_labels: {{ chart_data.line_labels | tojson }},
+    line_ratings: {{ chart_data.line_ratings | tojson }}
   };
 
   new Chart(document.getElementById("barChart"), {
@@ -141,7 +140,10 @@
     options: {
       responsive: true,
       scales: {
-        y: { beginAtZero: true, max: 5 }
+        y: {
+          beginAtZero: true,
+          max: 5
+        }
       }
     }
   });
@@ -151,7 +153,7 @@
     data: {
       labels: chartData.gender_labels,
       datasets: [{
-        label: 'Gender Distribution',
+        label: "Gender Distribution",
         data: chartData.gender_counts,
         backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
       }]
@@ -174,5 +176,4 @@
     options: { responsive: true }
   });
 </script>
-
 {% endblock %}
