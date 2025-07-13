@@ -1,29 +1,20 @@
 from flask import Flask, render_template, request, redirect, Response as FlaskResponse
-from flask_sqlalchemy import SQLAlchemy
 from collections import defaultdict
-import matplotlib.pyplot as plt
 from wordcloud import WordCloud
+from dotenv import load_dotenv
+from supabase import create_client
 import os
 import csv
 
-app = Flask(__name__)  # Uses /templates by default
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///responses.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# ✅ Load environment variables from .env file
+load_dotenv()
 
-db = SQLAlchemy(app)
+app = Flask(__name__)
 
-# ---------- DATABASE MODEL ----------
-class Response(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), nullable=False)
-    email = db.Column(db.String(120), nullable=False)
-    age = db.Column(db.Integer, nullable=False)
-    gender = db.Column(db.String(20), nullable=False)
-    dept = db.Column(db.String(100), nullable=False)
-    rating = db.Column(db.Integer, nullable=False)
-    likes = db.Column(db.Text)
-    suggestions = db.Column(db.Text)
-    recommend = db.Column(db.String(10), nullable=False)
+# ✅ Supabase configuration
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ---------- HOME PAGE ----------
 @app.route("/")
@@ -33,19 +24,18 @@ def index():
 # ---------- FORM SUBMISSION ----------
 @app.route("/submit", methods=["POST"])
 def submit():
-    data = Response(
-        name=request.form['name'],
-        email=request.form['email'],
-        age=int(request.form['age']),
-        gender=request.form['gender'],
-        dept=request.form['dept'],
-        rating=int(request.form['rating']),
-        likes=request.form.get('likes', ''),
-        suggestions=request.form.get('suggestions', ''),
-        recommend=request.form['recommend']
-    )
-    db.session.add(data)
-    db.session.commit()
+    data = {
+        "name": request.form['name'],
+        "email": request.form['email'],
+        "age": int(request.form['age']),
+        "gender": request.form['gender'],
+        "dept": request.form['dept'],
+        "rating": int(request.form['rating']),
+        "likes": request.form.get('likes', ''),
+        "suggestions": request.form.get('suggestions', ''),
+        "recommend": request.form['recommend']
+    }
+    supabase.table("responses").insert(data).execute()
     return redirect("/thankyou")
 
 # ---------- THANK YOU PAGE ----------
@@ -56,19 +46,21 @@ def thankyou():
 # ---------- RESULTS PAGE ----------
 @app.route("/results")
 def results():
-    responses = Response.query.all()
+    result = supabase.table("responses").select("*").execute()
+    responses = result.data if result else []
+
     total_responses = len(responses)
-    average_age = round(sum(r.age for r in responses) / total_responses, 2) if responses else 0
-    unique_names = list(set(r.name for r in responses))
+    average_age = round(sum(r['age'] for r in responses) / total_responses, 2) if responses else 0
+    unique_names = list(set(r['name'] for r in responses))
 
     dept_ratings_map = defaultdict(list)
     gender_count_map = defaultdict(int)
     name_rating_map = defaultdict(list)
 
     for r in responses:
-        dept_ratings_map[r.dept].append(r.rating)
-        gender_count_map[r.gender] += 1
-        name_rating_map[r.name].append(r.rating)
+        dept_ratings_map[r['dept']].append(r['rating'])
+        gender_count_map[r['gender']] += 1
+        name_rating_map[r['name']].append(r['rating'])
 
     chart_data = {
         'dept_labels': list(dept_ratings_map.keys()),
@@ -79,8 +71,7 @@ def results():
         'line_ratings': [round(sum(ratings)/len(ratings), 2) for ratings in name_rating_map.values()]
     }
 
-    # ---------- WORD CLOUD ----------
-    combined_text = " ".join([(r.likes or "") + " " + (r.suggestions or "") for r in responses])
+    combined_text = " ".join([(r.get('likes') or "") + " " + (r.get('suggestions') or "") for r in responses])
     img_path = None
 
     if combined_text.strip():
@@ -111,24 +102,24 @@ def upload_csv():
         if file and file.filename.endswith('.csv'):
             stream = file.stream.read().decode("utf-8").splitlines()
             reader = csv.DictReader(stream)
+            entries = []
             for row in reader:
-                new_entry = Response(
-                    name=row['Name'],
-                    email=row['Email'],
-                    age=int(row['Age']),
-                    gender=row['Gender'],
-                    dept=row['Department'],
-                    rating=int(row['Rating']),
-                    likes=row.get('Likes', ''),
-                    suggestions=row.get('Suggestions', ''),
-                    recommend=row['Recommend']
-                )
-                db.session.add(new_entry)
-            db.session.commit()
+                entries.append({
+                    "name": row['Name'],
+                    "email": row['Email'],
+                    "age": int(row['Age']),
+                    "gender": row['Gender'],
+                    "dept": row['Department'],
+                    "rating": int(row['Rating']),
+                    "likes": row.get('Likes', ''),
+                    "suggestions": row.get('Suggestions', ''),
+                    "recommend": row['Recommend']
+                })
+            supabase.table("responses").insert(entries).execute()
             return "✅ CSV uploaded successfully! <a href='/results'>View Results</a>"
         return "⚠️ Invalid file format. Please upload a CSV file."
     return '''
-    <h3>📤 Upload CSV</h3>
+    <h3>📄 Upload CSV</h3>
     <form method="post" enctype="multipart/form-data">
         <input type="file" name="file" accept=".csv" required>
         <input type="submit" value="Upload">
@@ -138,12 +129,14 @@ def upload_csv():
 # ---------- DOWNLOAD CSV ----------
 @app.route("/download")
 def download_csv():
-    responses = Response.query.all()
+    result = supabase.table("responses").select("*").execute()
+    responses = result.data if result else []
+
     rows = [['Name', 'Email', 'Age', 'Gender', 'Department', 'Rating', 'Likes', 'Suggestions', 'Recommend']]
     for r in responses:
         rows.append([
-            r.name, r.email, r.age, r.gender, r.dept,
-            r.rating, r.likes or '', r.suggestions or '', r.recommend
+            r['name'], r['email'], r['age'], r['gender'], r['dept'],
+            r['rating'], r.get('likes', ''), r.get('suggestions', ''), r['recommend']
         ])
 
     def generate():
@@ -155,6 +148,4 @@ def download_csv():
 
 # ---------- RUN ----------
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)
