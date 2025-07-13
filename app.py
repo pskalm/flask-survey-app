@@ -6,7 +6,7 @@ from wordcloud import WordCloud
 import os
 import csv
 
-app = Flask(__name__)  # ✅ Uses default /templates folder
+app = Flask(__name__)  # Uses /templates by default
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///responses.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -82,14 +82,18 @@ def results():
     # ---------- WORD CLOUD ----------
     combined_text = " ".join([(r.likes or "") + " " + (r.suggestions or "") for r in responses])
     img_path = None
+
     if combined_text.strip():
         try:
             os.makedirs("static", exist_ok=True)
-            wordcloud = WordCloud(width=800, height=400, background_color='white').generate(combined_text)
             img_path = os.path.join("static", "wordcloud.png")
+            if os.path.exists(img_path):
+                os.remove(img_path)
+            wordcloud = WordCloud(width=800, height=400, background_color='white').generate(combined_text)
             wordcloud.to_file(img_path)
         except Exception as e:
             print("⚠️ Wordcloud generation failed:", e)
+            img_path = None
 
     return render_template("results.html",
                            responses=responses,
