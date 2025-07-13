@@ -1,13 +1,12 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, Response as FlaskResponse
 from flask_sqlalchemy import SQLAlchemy
 from collections import defaultdict
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 import os
 import csv
-from flask import Response as FlaskResponse
 
-app = Flask(__name__)  # ✅ Use default "templates" folder at project root
+app = Flask(__name__)  # ✅ Uses default /templates folder
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///responses.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -47,14 +46,14 @@ def submit():
     )
     db.session.add(data)
     db.session.commit()
-    return redirect("/thankyou")  # Redirect to thank you page
+    return redirect("/thankyou")
 
 # ---------- THANK YOU PAGE ----------
 @app.route("/thankyou")
 def thankyou():
     return render_template("thankyou.html")
 
-# ---------- RESULTS & ANALYSIS ----------
+# ---------- RESULTS PAGE ----------
 @app.route("/results")
 def results():
     responses = Response.query.all()
@@ -84,9 +83,13 @@ def results():
     combined_text = " ".join([(r.likes or "") + " " + (r.suggestions or "") for r in responses])
     img_path = None
     if combined_text.strip():
-        wordcloud = WordCloud(width=800, height=400, background_color='white').generate(combined_text)
-        img_path = os.path.join("static", "wordcloud.png")
-        wordcloud.to_file(img_path)
+        try:
+            os.makedirs("static", exist_ok=True)
+            wordcloud = WordCloud(width=800, height=400, background_color='white').generate(combined_text)
+            img_path = os.path.join("static", "wordcloud.png")
+            wordcloud.to_file(img_path)
+        except Exception as e:
+            print("⚠️ Wordcloud generation failed:", e)
 
     return render_template("results.html",
                            responses=responses,
@@ -129,27 +132,24 @@ def upload_csv():
     '''
 
 # ---------- DOWNLOAD CSV ----------
-@app.route('/download')
+@app.route("/download")
 def download_csv():
     responses = Response.query.all()
-    si = []
-    header = ['Name', 'Email', 'Age', 'Gender', 'Department', 'Rating', 'Likes', 'Suggestions', 'Recommend']
-    si.append(header)
-
+    rows = [['Name', 'Email', 'Age', 'Gender', 'Department', 'Rating', 'Likes', 'Suggestions', 'Recommend']]
     for r in responses:
-        si.append([
+        rows.append([
             r.name, r.email, r.age, r.gender, r.dept,
             r.rating, r.likes or '', r.suggestions or '', r.recommend
         ])
 
     def generate():
-        for row in si:
+        for row in rows:
             yield ','.join(map(str, row)) + '\n'
 
     return FlaskResponse(generate(), mimetype='text/csv',
                          headers={"Content-Disposition": "attachment;filename=survey_responses.csv"})
 
-# ---------- MAIN ----------
+# ---------- RUN ----------
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
