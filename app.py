@@ -7,12 +7,12 @@ from supabase import create_client
 import os
 import csv
 
-# ✅ Load environment variables from .env file
+# ✅ Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 
-# ✅ Email Config from .env
+# ✅ Email Config
 app.config['MAIL_SERVER'] = os.getenv("MAIL_SERVER")
 app.config['MAIL_PORT'] = int(os.getenv("MAIL_PORT"))
 app.config['MAIL_USE_TLS'] = os.getenv("MAIL_USE_TLS") == 'True'
@@ -22,12 +22,12 @@ app.config['MAIL_DEFAULT_SENDER'] = os.getenv("MAIL_DEFAULT_SENDER")
 
 mail = Mail(app)
 
-# ✅ Supabase config
+# ✅ Supabase Config
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ---------- HOME PAGE ----------
+# ---------- HOME ----------
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -47,31 +47,28 @@ def submit():
         "recommend": request.form['recommend']
     }
 
-    # ✅ Insert into Supabase
     supabase.table("responses").insert(data).execute()
 
-    # ✅ Send confirmation email
+    email_sent = False
     try:
         msg = Message(
             subject="Thank you for your feedback!",
             recipients=[data['email']],
-            body=f"Hi {data['name']},\n\nThanks for submitting your feedback. We appreciate your input!\n\nRegards,\nTeam"
+            body=f"Hi {data['name']},\n\nThanks for submitting your feedback. We appreciate your input!\n\nBest,\nTeam"
         )
         mail.send(msg)
+        email_sent = True
     except Exception as e:
         print("⚠️ Email failed to send:", e)
 
-    return redirect("/thankyou?email_sent=true")
+    return redirect(f"/thankyou?email_sent={'true' if email_sent else 'false'}")
 
-   
-
-
-# ---------- THANK YOU PAGE ----------
+# ---------- THANK YOU ----------
 @app.route("/thankyou")
 def thankyou():
-    email_sent = request.args.get("email_sent") == "true"
-    return render_template("thankyou.html", email_sent=email_sent)
-# ---------- RESULTS PAGE ----------
+    return render_template("thankyou.html")
+
+# ---------- RESULTS ----------
 @app.route("/results")
 def results():
     result = supabase.table("responses").select("*").execute()
@@ -92,19 +89,19 @@ def results():
 
     chart_data = {
         'dept_labels': list(dept_ratings_map.keys()),
-        'dept_ratings': [round(sum(ratings)/len(ratings), 2) for ratings in dept_ratings_map.values()],
+        'dept_ratings': [round(sum(ratings) / len(ratings), 2) for ratings in dept_ratings_map.values()],
         'gender_labels': list(gender_count_map.keys()),
         'gender_counts': list(gender_count_map.values()),
         'line_labels': list(name_rating_map.keys()),
-        'line_ratings': [round(sum(ratings)/len(ratings), 2) for ratings in name_rating_map.values()]
+        'line_ratings': [round(sum(ratings) / len(ratings), 2) for ratings in name_rating_map.values()]
     }
 
     combined_text = " ".join([
         (r.get('likes') or "") + " " + (r.get('suggestions') or "")
         for r in responses
     ])
-    img_path = None
 
+    img_path = None
     if combined_text.strip():
         try:
             os.makedirs("static", exist_ok=True)
