@@ -1,10 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-{% if email_sent %}
-  <p style="color: green;">📧 A confirmation email has been sent to your address.</p>
-{% endif %}
-
   <meta charset="UTF-8">
   <title>Thank You</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -21,27 +17,37 @@
       text-align: center;
       background: white;
       padding: 3rem;
-      border-radius: 10px;
+      border-radius: 16px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      max-width: 500px;
+      width: 90%;
     }
     .thankyou-box h1 {
       color: #28a745;
       font-size: 2rem;
+      margin-bottom: 0.75rem;
     }
     .thankyou-box p {
       font-size: 1.2rem;
       color: #555;
+      margin: 0.5rem 0;
     }
-    .thankyou-box a {
-      margin-top: 1rem;
+    .thankyou-box .email-alert {
+      color: #198754;
+      font-weight: 500;
+      font-size: 1rem;
+      margin-bottom: 1rem;
     }
   </style>
 </head>
 <body>
   <div class="thankyou-box">
+    {% if request.args.get('email_sent') == 'true' %}
+      <p class="email-alert">📧 A confirmation email has been sent to your address.</p>
+    {% endif %}
     <h1>🎉 Thank You for Your Feedback!</h1>
     <p>We appreciate your time and response.</p>
-    <a href="/" class="btn btn-primary mt-3">← Submit Another Response😊</a>
+    <a href="/" class="btn btn-primary mt-3">← Submit Another Response 😊</a>
   </div>
 </body>
 </html>
