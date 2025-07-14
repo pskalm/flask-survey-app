@@ -66,12 +66,22 @@ def submit():
 # ---------- THANK YOU ----------
 @app.route("/thankyou")
 def thankyou():
-    return render_template("thankyou.html")
+    email_sent = request.args.get("email_sent") == "true"
+    return render_template("thankyou.html", email_sent=email_sent)
 
 # ---------- RESULTS ----------
 @app.route("/results")
 def results():
-    result = supabase.table("responses").select("*").execute()
+    gender_filter = request.args.get("gender")
+    dept_filter = request.args.get("dept")
+
+    query = supabase.table("responses").select("*")
+    if gender_filter:
+        query = query.eq("gender", gender_filter)
+    if dept_filter:
+        query = query.eq("dept", dept_filter)
+
+    result = query.execute()
     responses = result.data if result else []
 
     total_responses = len(responses)
