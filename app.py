@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, Response as FlaskRe
 from collections import defaultdict
 from wordcloud import WordCloud
 from dotenv import load_dotenv
+from flask_mail import Mail, Message
 from supabase import create_client
 import os
 import csv
@@ -11,7 +12,17 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# ✅ Supabase configuration
+# ✅ Email Config from .env
+app.config['MAIL_SERVER'] = os.getenv("MAIL_SERVER")
+app.config['MAIL_PORT'] = int(os.getenv("MAIL_PORT"))
+app.config['MAIL_USE_TLS'] = os.getenv("MAIL_USE_TLS") == 'True'
+app.config['MAIL_USERNAME'] = os.getenv("MAIL_USERNAME")
+app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD")
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv("MAIL_DEFAULT_SENDER")
+
+mail = Mail(app)
+
+# ✅ Supabase config
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -35,8 +46,24 @@ def submit():
         "suggestions": request.form.get('suggestions', ''),
         "recommend": request.form['recommend']
     }
+
+    # ✅ Insert into Supabase
     supabase.table("responses").insert(data).execute()
+
+    # ✅ Send confirmation email
+    try:
+        msg = Message(
+            subject="Thank you for your feedback!",
+            recipients=[data['email']],
+            body=f"Hi {data['name']},\n\nThanks for submitting your feedback. We appreciate your input!\n\nRegards,\nTeam"
+        )
+        mail.send(msg)
+    except Exception as e:
+        print("⚠️ Email failed to send:", e)
+
     return redirect("/thankyou")
+   
+
 
 # ---------- THANK YOU PAGE ----------
 @app.route("/thankyou")
@@ -71,7 +98,10 @@ def results():
         'line_ratings': [round(sum(ratings)/len(ratings), 2) for ratings in name_rating_map.values()]
     }
 
-    combined_text = " ".join([(r.get('likes') or "") + " " + (r.get('suggestions') or "") for r in responses])
+    combined_text = " ".join([
+        (r.get('likes') or "") + " " + (r.get('suggestions') or "")
+        for r in responses
+    ])
     img_path = None
 
     if combined_text.strip():
@@ -146,6 +176,6 @@ def download_csv():
     return FlaskResponse(generate(), mimetype='text/csv',
                          headers={"Content-Disposition": "attachment;filename=survey_responses.csv"})
 
-# ---------- RUN ----------
+# ---------- MAIN ----------
 if __name__ == "__main__":
     app.run(debug=True)
