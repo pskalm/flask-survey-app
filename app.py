@@ -61,15 +61,16 @@ def submit():
     except Exception as e:
         print("⚠️ Email failed to send:", e)
 
-    return redirect("/thankyou")
+    return redirect("/thankyou?email_sent=true")
+
    
 
 
 # ---------- THANK YOU PAGE ----------
 @app.route("/thankyou")
 def thankyou():
-    return render_template("thankyou.html")
-
+    email_sent = request.args.get("email_sent") == "true"
+    return render_template("thankyou.html", email_sent=email_sent)
 # ---------- RESULTS PAGE ----------
 @app.route("/results")
 def results():
